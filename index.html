@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог парфюмерии La Parfum</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        #search { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+        #catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .card { border: 1px solid #eee; padding: 15px; border-radius: 6px; background: #fafafa; }
+        .card h3 { margin: 0 0 10px 0; font-size: 16px; color: #222; }
+        .card .price { font-weight: bold; color: #d9534f; font-size: 18px; }
+        .error { color: red; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Каталог La Parfum</h1>
+    <input type="text" id="search" placeholder="Начните вводить название или бренд...">
+    <div id="catalog">
+        <p style="text-align:center; width:100%;">Загрузка данных...</p>
+    </div>
+</div>
+
+<script>
+    // ВНИМАНИЕ: тут указано имя файла с данными. 
+    // Убедись, что твой файл с таблицей называется именно data.csv и лежит в этом же репозитории.
+    const csvFilePath = 'data.csv'; 
+
+    let allPerfumes = [];
+
+    // Функция для загрузки CSV
+    fetch(csvFilePath)
+        .then(response => {
+            if (!response.ok) throw new Error('Файл не найден');
+            return response.text();
+        })
+        .then(csvText => {
+            // Простой парсер CSV (работает, если в названиях нет запятых внутри кавычек)
+            const rows = csvText.split('\n').filter(row => row.trim() !== '');
+            const headers = rows[0].split(',').map(h => h.trim());
+            
+            // Ищем индексы колонок (название и цена) - предполагаем, что они есть
+            let nameIndex = headers.findIndex(h => h.toLowerCase().includes('наимен') || h.toLowerCase().includes('назв'));
+            let priceIndex = headers.findIndex(h => h.toLowerCase().includes('цен'));
+            
+            // Если не нашли по названию, берем первые две колонки
+            if (nameIndex === -1) nameIndex = 1; // Обычно 0 - это фото
+            if (priceIndex === -1) priceIndex = 2;
+
+            for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i].split(',');
+                if (cols.length > Math.max(nameIndex, priceIndex)) {
+                    allPerfumes.push({
+                        name: cols[nameIndex].replace(/"/g, '').trim(),
+                        price: cols[priceIndex].replace(/"/g, '').trim()
+                    });
+                }
+            }
+            
+            renderCatalog(allPerfumes);
+        })
+        .catch(error => {
+            document.getElementById('catalog').innerHTML = `<p class="error">Ошибка: Не удалось загрузить файл данных (${csvFilePath}).<br>Убедитесь, что вы загрузили файл data.csv в этот репозиторий.</p>`;
+            console.error(error);
+        });
+
+    // Функция отрисовки карточек
+    function renderCatalog(items) {
+        const container = document.getElementById('catalog');
+        container.innerHTML = '';
+        
+        if (items.length === 0) {
+            container.innerHTML = '<p style="text-align:center; width:100%;">Ничего не найдено.</p>';
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <h3>${item.name}</h3>
+                <div class="price">${item.price} ₽</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Поиск
+    document.getElementById('search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = allPerfumes.filter(item => item.name.toLowerCase().includes(query));
+        renderCatalog(filtered);
+    });
+</script>
+
+</body>
+</html>
