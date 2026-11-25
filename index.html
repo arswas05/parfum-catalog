@@ -14,7 +14,6 @@
         .card img { width: 100%; height: 250px; object-fit: contain; margin-bottom: 10px; background: #fff;}
         .card h3 { margin: 0 0 10px 0; font-size: 14px; color: #222; word-wrap: break-word; flex-grow: 1;}
         .card .price { font-weight: bold; color: #d9534f; font-size: 18px; }
-        .error { color: red; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -28,61 +27,59 @@
 </div>
 
 <script>
-    // v=30 чтобы браузер точно скачал свежий файл
-    const csvFilePath = 'data.csv?v=30'; 
+    // v=99, чтобы браузер точно не кэшировал старый файл
+    const csvFilePath = 'data.csv?v=99'; 
 
     let allPerfumes = [];
 
     fetch(csvFilePath)
-        .then(response => {
-            if (!response.ok) throw new Error('Файл не найден');
-            return response.text();
-        })
+        .then(response => response.text())
         .then(csvText => {
-            const rows = csvText.split('\n').filter(row => row.trim() !== '');
+            const lines = csvText.split('\n');
             
-            // Пропускаем шапку
-            for (let i = 1; i < rows.length; i++) {
-                const row = rows[i];
-                
-                // Умный парсер
-                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
-                
-                if (cols.length >= 3) {
-                    let price = cols[0].replace(/"/g, '').trim();
-                    let imgUrl = cols[1].replace(/"/g, '').trim();
-                    let title = cols[2].replace(/"/g, '').trim();
+            for (let i = 1; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
 
-                    if (!price || price === 'price') continue;
+                // Ищем ссылку на картинку (она начинается на http)
+                let urlMatch = line.match(/https?:\/\/[^,]+/);
+                if (!urlMatch) continue;
+                
+                let imgUrl = urlMatch[0].replace(/"/g, ''); // Очищаем от кавычек
+                
+                // Разделяем строку на две части: до ссылки и после ссылки
+                let parts = line.split(imgUrl);
+                
+                // В части ДО ссылки лежит цена (с пробелами и кавычками)
+                let rawPrice = parts[0].replace(/"/g, '').replace(/,/g, ' ').trim();
+                // Убираем ВСЕ пробелы из цены, чтобы "3 950" стало "3950"
+                let price = rawPrice.replace(/\s+/g, ''); 
+                
+                // В части ПОСЛЕ ссылки лежит название
+                let title = parts[1] ? parts[1].replace(/"/g, '').replace(/^,/, '').trim() : 'Неизвестный товар';
 
-                    allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
-                }
+                // Если цена вообще пустая, ставим прочерк
+                if (!price) price = "0"; 
+
+                allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
             }
+            
             renderCatalog(allPerfumes);
         })
         .catch(error => {
-            document.getElementById('catalog').innerHTML = `<p class="error">Ошибка: ${error.message}</p>`;
+            document.getElementById('catalog').innerHTML = `<p style="text-align:center; color:red;">Ошибка загрузки данных.</p>`;
         });
 
     function renderCatalog(items) {
         const container = document.getElementById('catalog');
         container.innerHTML = '';
         
-        if (items.length === 0) {
-            container.innerHTML = '<p style="text-align:center; width:100%;">Ничего не найдено.</p>';
-            return;
-        }
-
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'card';
             
-            const imgHtml = item.imgUrl && item.imgUrl.startsWith('http') 
-                ? `<img src="${item.imgUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">` 
-                : `<div style="height:250px; display:flex; align-items:center; justify-content:center; background:#ddd;">Нет фото</div>`;
-
             card.innerHTML = `
-                ${imgHtml}
+                <img src="${item.imgUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
                 <h3>${item.title}</h3>
                 <div class="price">${item.price} ₽</div>
             `;
