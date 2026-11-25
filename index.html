@@ -28,8 +28,8 @@
 </div>
 
 <script>
-    // Добавляем ?v=3, чтобы браузер не кэшировал старый файл
-    const csvFilePath = 'data.csv?v=3'; 
+    // v=30 чтобы браузер точно скачал свежий файл
+    const csvFilePath = 'data.csv?v=30'; 
 
     let allPerfumes = [];
 
@@ -41,26 +41,27 @@
         .then(csvText => {
             const rows = csvText.split('\n').filter(row => row.trim() !== '');
             
-            // Пропускаем первую строку (шапку)
+            // Пропускаем шапку
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
-                // Простой способ разделить строку CSV (учитывая кавычки)
-                const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || row.split(',');
+                
+                // Умный парсер
+                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
                 
                 if (cols.length >= 3) {
                     let price = cols[0].replace(/"/g, '').trim();
                     let imgUrl = cols[1].replace(/"/g, '').trim();
                     let title = cols[2].replace(/"/g, '').trim();
 
-                    if (title.length > 2) {
-                        allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
-                    }
+                    if (!price || price === 'price') continue;
+
+                    allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
                 }
             }
             renderCatalog(allPerfumes);
         })
         .catch(error => {
-            document.getElementById('catalog').innerHTML = `<p class="error">Ошибка: ${error.message}. Убедитесь, что файл data.csv загружен.</p>`;
+            document.getElementById('catalog').innerHTML = `<p class="error">Ошибка: ${error.message}</p>`;
         });
 
     function renderCatalog(items) {
@@ -76,7 +77,6 @@
             const card = document.createElement('div');
             card.className = 'card';
             
-            // Если картинки нет или она не грузится, показываем заглушку
             const imgHtml = item.imgUrl && item.imgUrl.startsWith('http') 
                 ? `<img src="${item.imgUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">` 
                 : `<div style="height:250px; display:flex; align-items:center; justify-content:center; background:#ddd;">Нет фото</div>`;
@@ -84,7 +84,7 @@
             card.innerHTML = `
                 ${imgHtml}
                 <h3>${item.title}</h3>
-                <div class="price">${item.price}</div>
+                <div class="price">${item.price} ₽</div>
             `;
             container.appendChild(card);
         });
