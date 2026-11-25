@@ -5,20 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Каталог La Parfum</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-        #search { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
-        #catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
-        .card { border: 1px solid #eee; padding: 10px; border-radius: 6px; background: #fafafa; display: flex; flex-direction: column; }
-        .card img { width: 100%; height: 250px; object-fit: contain; margin-bottom: 10px; background: #fff;}
-        .card h3 { margin: 0 0 10px 0; font-size: 14px; color: #222; word-wrap: break-word; flex-grow: 1;}
-        .card .price { font-weight: bold; color: #d9534f; font-size: 18px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; }
+        h1 { text-align: center; color: #333; margin-top: 0; font-size: 28px; }
+        
+        /* Минималистичный счетчик товаров */
+        #item-counter {
+            position: absolute;
+            top: 25px;
+            right: 20px;
+            font-size: 13px;
+            color: #999;
+            font-weight: normal;
+        }
+
+        #search { 
+            width: 100%; 
+            padding: 14px; 
+            margin-bottom: 25px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #search:focus { border-color: #aaa; }
+
+        #catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        
+        .card { 
+            border: 1px solid #eee; 
+            padding: 12px; 
+            border-radius: 8px; 
+            background: #fafafa; 
+            display: flex; 
+            flex-direction: column; 
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+        
+        .card img { 
+            width: 100%; 
+            height: 250px; 
+            object-fit: contain; 
+            margin-bottom: 12px; 
+            background: #fff;
+            border-radius: 4px;
+        }
+        
+        .card h3 { 
+            margin: 0 0 10px 0; 
+            font-size: 14px; 
+            color: #222; 
+            word-wrap: break-word; 
+            flex-grow: 1; 
+            line-height: 1.4;
+        }
+        
+        .card .price { 
+            font-weight: bold; 
+            color: #d9534f; 
+            font-size: 18px; 
+            margin-top: auto;
+        }
+        
+        .error { color: red; text-align: center; font-weight: bold; padding: 20px;}
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div id="item-counter">Загрузка...</div>
     <h1>Каталог La Parfum</h1>
     <input type="text" id="search" placeholder="Начните вводить название или бренд...">
     <div id="catalog">
@@ -27,130 +85,104 @@
 </div>
 
 <script>
-    // v=100, чтобы браузер точно скачал новый код
-    const csvFilePath = 'data.csv?v=100'; 
+    // v=999, чтобы браузер всегда скачивал свежую версию CSV
+    const csvFilePath = 'data.csv?v=999'; 
 
-    // 🚀 СЛОВАРЬ ЗАМЕН: Слева то, как пишет парсер, справа — как будет на сайте
+    // Словарь замен кривых брендов (из парсера)
     const brandFixes = {
-        "DИOR": "Dior",
-        "Dиor": "Dior",
-        "DR ": "Dior ",
-        "Versac.": "Versace",
-        "Versac ": "Versace ",
-        "KLN ": "Kilian ",
-        "TF ": "Tom Ford ",
-        "T.F. ": "Tom Ford ",
-        "CHNL ": "Chanel ",
-        "CH ": "Carolina Herrera ",
-        "P.R. ": "Paco Rabanne ",
-        "PR ": "Paco Rabanne ",
-        "ARMN ": "Armani ",
-        "LV ": "Louis Vuitton ",
-        "MFK ": "Maison Francis Kurkdjian ",
-        "YSЛ ": "YSL ",
-        "YSL ": "YSL ",
-        "BRDO ": "Byredo ",
-        "lacost. ": "Lacoste ",
-        "Mont. ": "Montale ",
-        "CRИИD ": "Creed ",
-        "CRD ": "Creed ",
-        "Init. ": "Initio ",
-        "Initиo ": "Initio ",
-        "Rich. ": "Richard ",
-        "Att. Coll. ": "Attar Collection ",
-        "Att Coll ": "Attar Collection ",
-        "LNVN ": "Lanvin ",
-        "HERM. ": "Hermes ",
-        "MAB ": "Marc-Antoine Barrois ",
-        "Vilhelm parf. ": "Vilhelm Parfumerie ",
-        "Vilhel. parf. ": "Vilhelm Parfumerie ",
-        "DG ": "Dolce & Gabbana ",
-        "GCC ": "Gucci ",
-        "Gvnch ": "Givenchy ",
-        "Manc. ": "Mancera ",
-        "XERJ. ": "Xerjoff ",
-        "BLGR ": "Bvlgari ",
-        "kenz. ": "Kenzo ",
-        "Ex nihиlo ": "Ex Nihilo ",
-        "Ex Nihilo ": "Ex Nihilo ",
-        "Zielin. ": "Zielinski & Rozen ",
-        "L LB ": "Le Labo ",
-        "Esc. Molecules ": "Escentric Molecules ",
-        "Tiziana T. ": "Tiziana Terenzi ",
-        "Penhalig. ": "Penhaligon's ",
-        "Penhal. ": "Penhaligon's ",
-        "Franc B ": "Franck Boclet ",
-        "MOSCHIN. ": "Moschino ",
-        "Moschin. ": "Moschino ",
-        "Clin. ": "Clinique ",
-        "Ajm. ": "Ajmal ",
-        "Chopar. ": "Chopard ",
-        "Roj. ": "Roja ",
-        "Kaджal ": "Kajal ",
-        "Jimmи ": "Jimmy Choo ",
-        "Armaф ": "Armaf ",
-        "Bill. Elish ": "Billie Eilish ",
-        "Jo Mal. ": "Jo Malone ",
-        "C for Men ": "Clive Christian ",
-        "Initиo ": "Initio ",
-        "Шейх ": "Shaik ",
-        "Клив ": "Clive Christian ",
-        "Floraиku ": "Floraïku ",
-        "Vertu. ": "Vertus ",
-        "Tiff. & Co ": "Tiffany & Co ",
-        "Tiff. ": "Tiffany ",
-        "P. D. Marl. ": "Parfums de Marly ",
-        "P.D.M. ": "Parfums de Marly ",
-        "Mancer. ": "Mancera "
+        "DИOR": "Dior", "Dиor": "Dior", "DR ": "Dior ", "Versac.": "Versace", "Versac ": "Versace ",
+        "KLN ": "Kilian ", "TF ": "Tom Ford ", "T.F. ": "Tom Ford ", "CHNL ": "Chanel ", "CH ": "Carolina Herrera ",
+        "P.R. ": "Paco Rabanne ", "PR ": "Paco Rabanne ", "ARMN ": "Armani ", "LV ": "Louis Vuitton ",
+        "MFK ": "Maison Francis Kurkdjian ", "YSЛ ": "YSL ", "YSL ": "YSL ", "BRDO ": "Byredo ", "lacost. ": "Lacoste ",
+        "Mont. ": "Montale ", "CRИИD ": "Creed ", "CRD ": "Creed ", "Init. ": "Initio ", "Initиo ": "Initio ",
+        "Rich. ": "Richard ", "Att. Coll. ": "Attar Collection ", "Att Coll ": "Attar Collection ", "LNVN ": "Lanvin ",
+        "HERM. ": "Hermes ", "MAB ": "Marc-Antoine Barrois ", "Vilhelm parf. ": "Vilhelm Parfumerie ",
+        "Vilhel. parf. ": "Vilhelm Parfumerie ", "DG ": "Dolce & Gabbana ", "GCC ": "Gucci ", "Gvnch ": "Givenchy ",
+        "Manc. ": "Mancera ", "XERJ. ": "Xerjoff ", "BLGR ": "Bvlgari ", "kenz. ": "Kenzo ", "Ex nihиlo ": "Ex Nihilo ",
+        "Ex Nihilo ": "Ex Nihilo ", "Zielin. ": "Zielinski & Rozen ", "L LB ": "Le Labo ", "Esc. Molecules ": "Escentric Molecules ",
+        "Tiziana T. ": "Tiziana Terenzi ", "Penhalig. ": "Penhaligon's ", "Penhal. ": "Penhaligon's ", "Franc B ": "Franck Boclet ",
+        "MOSCHIN. ": "Moschino ", "Moschin. ": "Moschino ", "Clin. ": "Clinique ", "Ajm. ": "Ajmal ", "Chopar. ": "Chopard ",
+        "Roj. ": "Roja ", "Kaджal ": "Kajal ", "Jimmи ": "Jimmy Choo ", "Armaф ": "Armaf ", "Bill. Elish ": "Billie Eilish ",
+        "Jo Mal. ": "Jo Malone ", "C for Men ": "Clive Christian ", "Шейх ": "Shaik ", "Клив ": "Clive Christian ",
+        "Floraиku ": "Floraïku ", "Vertu. ": "Vertus ", "Tiff. & Co ": "Tiffany & Co ", "Tiff. ": "Tiffany ",
+        "P. D. Marl. ": "Parfums de Marly ", "P.D.M. ": "Parfums de Marly ", "Mancer. ": "Mancera "
     };
 
     let allPerfumes = [];
 
+    // Загрузка и парсинг CSV
     fetch(csvFilePath)
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) throw new Error('Файл не найден');
+            return response.text();
+        })
         .then(csvText => {
+            // Убираем BOM-символ, если он есть
+            csvText = csvText.replace(/^\uFEFF/, ''); 
+            
             const lines = csvText.split('\n');
             
             for (let i = 1; i < lines.length; i++) {
                 let line = lines[i].trim();
                 if (!line) continue;
 
+                // Ищем ссылку на картинку (начинается на http)
                 let urlMatch = line.match(/https?:\/\/[^,]+/);
                 if (!urlMatch) continue;
                 
-                let imgUrl = urlMatch[0].replace(/"/g, ''); 
+                let imgUrl = urlMatch[0].replace(/"/g, ''); // Убираем кавычки
+                
+                // Всё, что до ссылки — это название и цена
                 let parts = line.split(imgUrl);
+                let leftPart = parts[0];
                 
-                let rawPrice = parts[0].replace(/"/g, '').replace(/,/g, ' ').trim();
-                let price = rawPrice.replace(/\s+/g, ''); 
-                
-                let title = parts[1] ? parts[1].replace(/"/g, '').replace(/^,/, '').trim() : 'Неизвестный товар';
+                // Ищем цену (последнее число в левой части)
+                let priceMatch = leftPart.match(/(\d[\d\s]*)(?:₽)?\s*,?\s*$/);
+                let price = "0";
+                let title = leftPart;
 
-                // ✨ МАГИЯ ЗАМЕНЫ БРЕНДОВ ✨
+                if (priceMatch) {
+                    price = priceMatch[1].replace(/\s+/g, ''); // Убираем пробелы из цены
+                    title = leftPart.substring(0, leftPart.lastIndexOf(priceMatch[0])).replace(/"/g, '').trim();
+                } else {
+                    // Если не нашли цену, просто чистим кавычки
+                    title = leftPart.replace(/"/g, '').replace(/,$/, '').trim();
+                }
+
+                // Применяем замену брендов к названию
                 for (const [badName, goodName] of Object.entries(brandFixes)) {
-                    // Разбиваем строку на части по badName и склеиваем с goodName
                     title = title.split(badName).join(goodName);
                 }
 
-                if (!price) price = "0"; 
-
-                allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
+                if (title.length > 1 && price !== "0") {
+                    allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
+                }
             }
             
+            // Обновляем счетчик и рисуем каталог
+            document.getElementById('item-counter').innerText = `В каталоге: ${allPerfumes.length} шт.`;
             renderCatalog(allPerfumes);
         })
         .catch(error => {
-            document.getElementById('catalog').innerHTML = `<p style="text-align:center; color:red;">Ошибка загрузки данных.</p>`;
+            document.getElementById('catalog').innerHTML = `<p class="error">Ошибка: ${error.message}. Проверьте, что файл data.csv загружен.</p>`;
+            document.getElementById('item-counter').innerText = "";
         });
 
+    // Отрисовка карточек
     function renderCatalog(items) {
         const container = document.getElementById('catalog');
         container.innerHTML = '';
         
+        if (items.length === 0) {
+            container.innerHTML = '<p style="text-align:center; width:100%;">Ничего не найдено.</p>';
+            return;
+        }
+
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'card';
             
+            // Если картинка не загрузилась, показываем заглушку
             card.innerHTML = `
                 <img src="${item.imgUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
                 <h3>${item.title}</h3>
@@ -160,6 +192,7 @@
         });
     }
 
+    // Поиск
     document.getElementById('search').addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         const filtered = allPerfumes.filter(item => item.title.toLowerCase().includes(query));
