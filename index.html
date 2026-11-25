@@ -71,6 +71,26 @@
         }
         
         .error { color: red; text-align: center; font-weight: bold; padding: 20px;}
+
+        /* --- Мобильная адаптация --- */
+        @media (max-width: 768px) {
+            #item-counter {
+                position: static;       
+                text-align: center;     
+                margin-bottom: 10px;    
+                font-size: 14px;        
+                display: block;
+            }
+            h1 {
+                font-size: 22px;        
+                margin-top: 0;
+                margin-bottom: 15px;
+                word-break: break-word; 
+            }
+            .container {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -148,6 +168,9 @@
                     // Если не нашли цену, просто чистим кавычки
                     title = leftPart.replace(/"/g, '').replace(/,$/, '').trim();
                 }
+
+                // ИСПРАВЛЕНИЕ: Убираем лишние запятые и пробелы в самом конце названия
+                title = title.replace(/[,\s]+$/, '').trim();
 
                 // Применяем замену брендов к названию
                 for (const [badName, goodName] of Object.entries(brandFixes)) {
