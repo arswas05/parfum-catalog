@@ -27,8 +27,82 @@
 </div>
 
 <script>
-    // v=99, чтобы браузер точно не кэшировал старый файл
-    const csvFilePath = 'data.csv?v=99'; 
+    // v=100, чтобы браузер точно скачал новый код
+    const csvFilePath = 'data.csv?v=100'; 
+
+    // 🚀 СЛОВАРЬ ЗАМЕН: Слева то, как пишет парсер, справа — как будет на сайте
+    const brandFixes = {
+        "DИOR": "Dior",
+        "Dиor": "Dior",
+        "DR ": "Dior ",
+        "Versac.": "Versace",
+        "Versac ": "Versace ",
+        "KLN ": "Kilian ",
+        "TF ": "Tom Ford ",
+        "T.F. ": "Tom Ford ",
+        "CHNL ": "Chanel ",
+        "CH ": "Carolina Herrera ",
+        "P.R. ": "Paco Rabanne ",
+        "PR ": "Paco Rabanne ",
+        "ARMN ": "Armani ",
+        "LV ": "Louis Vuitton ",
+        "MFK ": "Maison Francis Kurkdjian ",
+        "YSЛ ": "YSL ",
+        "YSL ": "YSL ",
+        "BRDO ": "Byredo ",
+        "lacost. ": "Lacoste ",
+        "Mont. ": "Montale ",
+        "CRИИD ": "Creed ",
+        "CRD ": "Creed ",
+        "Init. ": "Initio ",
+        "Initиo ": "Initio ",
+        "Rich. ": "Richard ",
+        "Att. Coll. ": "Attar Collection ",
+        "Att Coll ": "Attar Collection ",
+        "LNVN ": "Lanvin ",
+        "HERM. ": "Hermes ",
+        "MAB ": "Marc-Antoine Barrois ",
+        "Vilhelm parf. ": "Vilhelm Parfumerie ",
+        "Vilhel. parf. ": "Vilhelm Parfumerie ",
+        "DG ": "Dolce & Gabbana ",
+        "GCC ": "Gucci ",
+        "Gvnch ": "Givenchy ",
+        "Manc. ": "Mancera ",
+        "XERJ. ": "Xerjoff ",
+        "BLGR ": "Bvlgari ",
+        "kenz. ": "Kenzo ",
+        "Ex nihиlo ": "Ex Nihilo ",
+        "Ex Nihilo ": "Ex Nihilo ",
+        "Zielin. ": "Zielinski & Rozen ",
+        "L LB ": "Le Labo ",
+        "Esc. Molecules ": "Escentric Molecules ",
+        "Tiziana T. ": "Tiziana Terenzi ",
+        "Penhalig. ": "Penhaligon's ",
+        "Penhal. ": "Penhaligon's ",
+        "Franc B ": "Franck Boclet ",
+        "MOSCHIN. ": "Moschino ",
+        "Moschin. ": "Moschino ",
+        "Clin. ": "Clinique ",
+        "Ajm. ": "Ajmal ",
+        "Chopar. ": "Chopard ",
+        "Roj. ": "Roja ",
+        "Kaджal ": "Kajal ",
+        "Jimmи ": "Jimmy Choo ",
+        "Armaф ": "Armaf ",
+        "Bill. Elish ": "Billie Eilish ",
+        "Jo Mal. ": "Jo Malone ",
+        "C for Men ": "Clive Christian ",
+        "Initиo ": "Initio ",
+        "Шейх ": "Shaik ",
+        "Клив ": "Clive Christian ",
+        "Floraиku ": "Floraïku ",
+        "Vertu. ": "Vertus ",
+        "Tiff. & Co ": "Tiffany & Co ",
+        "Tiff. ": "Tiffany ",
+        "P. D. Marl. ": "Parfums de Marly ",
+        "P.D.M. ": "Parfums de Marly ",
+        "Mancer. ": "Mancera "
+    };
 
     let allPerfumes = [];
 
@@ -41,24 +115,23 @@
                 let line = lines[i].trim();
                 if (!line) continue;
 
-                // Ищем ссылку на картинку (она начинается на http)
                 let urlMatch = line.match(/https?:\/\/[^,]+/);
                 if (!urlMatch) continue;
                 
-                let imgUrl = urlMatch[0].replace(/"/g, ''); // Очищаем от кавычек
-                
-                // Разделяем строку на две части: до ссылки и после ссылки
+                let imgUrl = urlMatch[0].replace(/"/g, ''); 
                 let parts = line.split(imgUrl);
                 
-                // В части ДО ссылки лежит цена (с пробелами и кавычками)
                 let rawPrice = parts[0].replace(/"/g, '').replace(/,/g, ' ').trim();
-                // Убираем ВСЕ пробелы из цены, чтобы "3 950" стало "3950"
                 let price = rawPrice.replace(/\s+/g, ''); 
                 
-                // В части ПОСЛЕ ссылки лежит название
                 let title = parts[1] ? parts[1].replace(/"/g, '').replace(/^,/, '').trim() : 'Неизвестный товар';
 
-                // Если цена вообще пустая, ставим прочерк
+                // ✨ МАГИЯ ЗАМЕНЫ БРЕНДОВ ✨
+                for (const [badName, goodName] of Object.entries(brandFixes)) {
+                    // Разбиваем строку на части по badName и склеиваем с goodName
+                    title = title.split(badName).join(goodName);
+                }
+
                 if (!price) price = "0"; 
 
                 allPerfumes.push({ price: price, imgUrl: imgUrl, title: title });
